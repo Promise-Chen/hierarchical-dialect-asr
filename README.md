@@ -51,9 +51,7 @@ term (each dialect focuses on a few clusters) and a **utilization KL** term
 (clusters are not all collapsed onto a few experts). Full derivations and the loss
 definitions are in [`docs/architecture.md`](docs/architecture.md).
 
-> 路由采用两个互补正则项：**Top-2 集中约束**（单方言集中使用少数簇）
-> 与**簇利用率 KL**（防止所有方言坍缩到同一批簇）。完整公式见
-> [`docs/architecture.md`](docs/architecture.md)。
+
 
 ## Repository layout 
 
@@ -91,8 +89,6 @@ variable — all paths in the YAML use `${PRETRAINED_DIR}` and `${STAGE1_CKPT}`
 placeholders instead of hardcoded absolute paths.
 
 
-> `${PRETRAINED_DIR}` / `${STAGE1_CKPT}` 占位符，请指向你本地的实际路径。
-
 ```bash
 export PRETRAINED_DIR=/path/to/pretrained_models
 export STAGE1_CKPT=exp/stage1_global_cluster/model.pt.avg3
@@ -105,8 +101,7 @@ audio path and transcript, consumed by `IndexDSJsonlWithAccent` /
 `AudioDatasetWithAccent`. Experiments use the **KeSpeech** corpus (~1,428 h,
 9 Mandarin dialects).
 
-> 每条样本为带 `dialect` 字段的 jsonl 记录，由 `IndexDSJsonlWithAccent` 读取。
-> 实验基于 **KeSpeech** 语料库（约 1,428 小时，9 种汉语方言）。
+
 
 ## Training
 
