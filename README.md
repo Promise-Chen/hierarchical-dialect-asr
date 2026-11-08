@@ -55,7 +55,7 @@ definitions are in [`docs/architecture.md`](docs/architecture.md).
 > 与**簇利用率 KL**（防止所有方言坍缩到同一批簇）。完整公式见
 > [`docs/architecture.md`](docs/architecture.md)。
 
-## Repository layout / 目录结构
+## Repository layout 
 
 ```
 modules/
@@ -78,7 +78,7 @@ docs/
   final_cer_report.txt            per-dialect CER on the KeSpeech test set
 ```
 
-## Setup / 环境
+## Setup 
 
 ```bash
 conda env create -f environment.yml
@@ -90,7 +90,7 @@ is downloaded separately from ModelScope. Point the configs at it via an environ
 variable — all paths in the YAML use `${PRETRAINED_DIR}` and `${STAGE1_CKPT}`
 placeholders instead of hardcoded absolute paths.
 
-> 预训练 Paraformer-zh 权重需单独从 ModelScope 下载。配置文件中所有本地路径均已替换为
+
 > `${PRETRAINED_DIR}` / `${STAGE1_CKPT}` 占位符，请指向你本地的实际路径。
 
 ```bash
@@ -98,7 +98,7 @@ export PRETRAINED_DIR=/path/to/pretrained_models
 export STAGE1_CKPT=exp/stage1_global_cluster/model.pt.avg3
 ```
 
-### Data format / 数据格式
+### Data format 
 
 Each training example is a jsonl record carrying a `dialect` label alongside the
 audio path and transcript, consumed by `IndexDSJsonlWithAccent` /
@@ -108,7 +108,7 @@ audio path and transcript, consumed by `IndexDSJsonlWithAccent` /
 > 每条样本为带 `dialect` 字段的 jsonl 记录，由 `IndexDSJsonlWithAccent` 读取。
 > 实验基于 **KeSpeech** 语料库（约 1,428 小时，9 种汉语方言）。
 
-## Training / 训练
+## Training
 
 The model is trained in three stages (shared structure → per-dialect residual →
 joint fine-tune). Backbone stays frozen; only the lightweight adapters are trained.
@@ -127,13 +127,13 @@ Layer freezing and per-group learning rates are controlled by environment variab
 documented at the top of each entry script (e.g. `FREEZE_BACKBONE`,
 `CLUSTER_LR_MULT`, `DIALECT_LR_MULT`).
 
-## Evaluation / 评测
+## Evaluation 
 
 ```bash
 bash scripts/50_eval_cer.sh <run_name>   # overall + per-dialect CER via jiwer
 ```
 
-## Results / 结果
+## Results
 
 Character Error Rate (CER) on the KeSpeech test set (19,723 utterances, 9 dialects).
 Adapting only lightweight low-rank modules on top of a frozen Paraformer backbone:
@@ -145,11 +145,10 @@ Adapting only lightweight low-rank modules on top of a frozen Paraformer backbon
 
 Per-dialect breakdown is in [`docs/final_cer_report.txt`](docs/final_cer_report.txt).
 
-> 在 KeSpeech 测试集（19,723 条，9 种方言）上，仅在冻结的 Paraformer 主干上训练
-> 轻量低秩模块，整体 CER 由 6.81% 降至 6.56%。分方言结果见
+
 > [`docs/final_cer_report.txt`](docs/final_cer_report.txt)。
 
-## Notes / 说明
+## Notes
 
 - This repository contains the model code, configs, and training/eval entry points
   for the final architecture. Training data, pretrained checkpoints, and experiment
@@ -157,5 +156,4 @@ Per-dialect breakdown is in [`docs/final_cer_report.txt`](docs/final_cer_report.
 - Built on [FunASR](https://github.com/modelscope/FunASR); the custom classes
   register into FunASR's table registry at import time.
 
-> 本仓库仅包含最终架构的模型代码、配置与训练/评测入口；训练数据、预训练权重与实验产物
-> 不纳入版本管理。基于 FunASR 实现，自定义类在 import 时注册进 FunASR 的注册表。
+。
