@@ -1,24 +1,21 @@
 # Hierarchical Dialect-Adaptive ASR on Paraformer
 
 > Coarse-to-fine dialect adaptation for multi-dialect Mandarin speech recognition.
-> 面向多方言普通话语音识别的「由粗到细」分层方言自适应方法。
+
 
 A parameter-efficient adaptation stack built on top of a pretrained **Paraformer**
 (FunASR) encoder. It models dialect differences in three tiers — a global
 calibration, a shared cross-dialect layer, and an utterance-level per-dialect
 residual — trained as lightweight adapters while the backbone stays frozen.
 
-在冻结 Paraformer 主干的前提下，用三层轻量 adapter 对方言差异进行
-**全局校准 → 跨方言共享 → 单方言动态残差**的分层建模。
+
 
 Evaluated on the **KeSpeech** corpus (9 Mandarin dialects). The full stack lowers
 average CER from **6.81% → 6.56%** over the fine-tuned Paraformer baseline, while
 training only a small fraction of adapter parameters.
+。
 
-> 在 **KeSpeech**（9 种普通话方言）上评测，相较微调后的 Paraformer 基线，
-> 整体 CER 由 **6.81% 降至 6.56%**，仅训练极少量 adapter 参数。
-
-## Architecture / 架构
+## Architecture 
 
 ```
           H  (frozen Paraformer encoder hidden states)
@@ -26,19 +23,19 @@ training only a small fraction of adapter parameters.
           ▼
  ┌─────────────────────────────┐
  │ 1. Global Dialect Calibration│  Low-rank FiLM, per-dialect γ/β
- │    全局方言校准               │  coarse, utterance-wide shift
+ │                │  coarse, utterance-wide shift
  └─────────────────────────────┘
           │  H^G
           ▼
  ┌─────────────────────────────┐
  │ 2. Latent Dialect Cluster    │  learnable prototypes + Top-2 routing
- │    潜在方言簇共享             │  K bottleneck cluster adapters
+ │                │  K bottleneck cluster adapters
  └─────────────────────────────┘
           │  H^C
           ▼
  ┌─────────────────────────────┐
  │ 3. Dynamic Dialect Residual  │  per-dialect low-rank ΔW (rank 4)
- │    动态单方言残差             │  gated by dialect emb + utterance
+ │                │  gated by dialect emb + utterance
  └─────────────────────────────┘
           │  H^D  →  Predictor → Decoder → text
 ```
