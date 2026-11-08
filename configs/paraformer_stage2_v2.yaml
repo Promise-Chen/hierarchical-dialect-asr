@@ -1,0 +1,153 @@
+# configs/paraformer_stage2_v2.yaml
+# Global + Cluster + Dynamic Dialect Residual (Stage 2 v2)
+#
+# 严格按 global_cluster_single_v2.md §5-7 实现第三部分：
+#   - Global FiLM：per-dialect 低秩调制，逐层注入 norm1 后（Stage1 冻结）
+#   - Cluster：方言簇路由 Top-2 + K 个 bottleneck adapter（Stage1 冻结）
+#   - Dynamic Dialect Residual：per-dialect 低秩残差 ΔW=A·B (rank 4) 寄生 cluster 投影权重
+#                               + Dynamic Gate（语句 attentive pool + 方言 emb 生成）
+# 零启动/反死锁：B 零初始化 → 初始 ΔW=0 恒等（起始 = Stage1 6.65%）；A Xavier 破对称。
+#
+# 训练策略：
+#   - 从 Stage 1 best checkpoint 初始化（frozen_lr2e3 avg3 = 6.65%）
+#   - 冻结 backbone + global_film + cluster（基础 adapters/gate/router）
+#   - 只训新的 dialect_residual + residual_*（gate net / pool / dialect emb），lr 1e-3
+
+model: ParaformerFiLM
+model_conf:
+  ctc_weight: 0.0
+  lsm_weight: 0.1
+  length_normalized_loss: true
+  predictor_weight: 1.0
+  predictor_bias: 1
+  sampling_ratio: 0.75
+
+init_param: ${STAGE1_CKPT}   # <-- Stage 1 averaged checkpoint, e.g. exp/stage1_global_cluster/model.pt.avg3
+ignore_init_mismatch: true
+
+encoder: SANMEncoderStage2V2
+encoder_conf:
+  output_size: 512
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 50
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  attention_dropout_rate: 0.1
+  input_layer: pe
+  pos_enc_class: SinusoidalPositionEncoder
+  normalize_before: true
+  kernel_size: 11
+  sanm_shfit: 0
+  selfattention_layer_type: sanm
+  # Global FiLM 参数
+  num_accents: 9
+  global_film_rank: 16
+  global_film_layers: all
+  global_film_alpha_init: 0.0
+  # Cluster 参数
+  num_clusters: 4
+  cluster_bottleneck: 64
+  cluster_emb_dim: 32
+  cluster_temperature: 0.1
+  cluster_gate_init: 0.0
+  # 第三部分：Dynamic Dialect Residual
+  residual_rank: 4                    # r_D（文档第一版）
+  residual_dialect_emb_dim: 16        # e_d^D 维度（§6.2 第一版 D_D=16）
+  residual_pool_proj_dim: 32          # v_x = W_x·u_x 维度（§6.1 例 32）
+  residual_att_dim: 128               # attentive pooling 内部维度
+
+decoder: ParaformerSANMDecoder
+decoder_conf:
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 16
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+  att_layer_num: 16
+  kernel_size: 11
+  sanm_shfit: 0
+
+predictor: CifPredictorV3
+predictor_conf:
+  idim: 512
+  threshold: 1.0
+  l_order: 1
+  r_order: 1
+  tail_threshold: 0.45
+
+frontend: WavFrontend
+frontend_conf:
+  fs: 16000
+  window: hamming
+  n_mels: 80
+  frame_length: 25
+  frame_shift: 10
+  lfr_m: 7
+  lfr_n: 6
+  cmvn_file: ${PRETRAINED_DIR}/paraformer_zh/am.mvn
+
+specaug: SpecAugLFR
+specaug_conf:
+  apply_time_warp: false
+  time_warp_window: 5
+  time_warp_mode: bicubic
+  apply_freq_mask: true
+  freq_mask_width_range: [0, 30]
+  lfr_rate: 6
+  num_freq_mask: 1
+  apply_time_mask: true
+  time_mask_width_range: [0, 12]
+  num_time_mask: 1
+
+train_conf:
+  accum_grad: 1
+  grad_clip: 5
+  max_epoch: 3
+  val_scheduler_criterion: [valid, acc]
+  best_model_criterion: [[valid, acc, max]]
+  keep_nbest_models: 5
+  log_interval: 50
+  avg_nbest_model: 3
+  resume: false
+  validate_interval: 999999
+  save_checkpoint_interval: 500
+  use_fp16: true
+  find_unused_parameters: true
+
+optim: adam
+optim_conf:
+  lr: 2.0e-05
+
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 500
+
+dataset: AudioDatasetWithAccent
+dataset_conf:
+  index_ds: IndexDSJsonlWithAccent
+  batch_sampler: BatchSampler
+  batch_type: example
+  batch_size: 32
+  max_token_length: 2048
+  buffer_size: 500
+  shuffle: true
+  num_workers: 4
+  data_split_num: 1
+
+tokenizer: CharTokenizer
+tokenizer_conf:
+  unk_symbol: <unk>
+  split_with_space: true
+  token_list: ${PRETRAINED_DIR}/paraformer_zh/tokens.json
+  seg_dict_file: ${PRETRAINED_DIR}/paraformer_zh/seg_dict
+
+ctc_conf:
+  dropout_rate: 0.0
+  ctc_type: builtin
+  reduce: true
+  ignore_nan_grad: true
+
+normalize: null

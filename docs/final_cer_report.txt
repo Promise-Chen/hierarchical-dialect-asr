@@ -1,0 +1,95 @@
+=== CER report for run kespeech_finetune_ep1to3 ===
+--- Overall ---
+  num utterances : 19723
+  hits           = 263481
+  substitutions  = 18958
+  deletions      = 1938
+  insertions     = 1462
+  ref_chars      = 284377
+  CER            = 0.0786
+
+=== Per-dialect CER (utt with dialect label: 19723) ===
+--- dialect=Beijing ---
+  num utterances : 265
+  hits           = 3483
+  substitutions  = 292
+  deletions      = 13
+  insertions     = 15
+  ref_chars      = 3788
+  CER            = 0.0845
+--- dialect=Ji-Lu ---
+  num utterances : 2809
+  hits           = 37141
+  substitutions  = 3170
+  deletions      = 212
+  insertions     = 253
+  ref_chars      = 40523
+  CER            = 0.0897
+--- dialect=Jiang-Huai ---
+  num utterances : 2271
+  hits           = 28250
+  substitutions  = 4237
+  deletions      = 349
+  insertions     = 283
+  ref_chars      = 32836
+  CER            = 0.1483
+--- dialect=Jiao-Liao ---
+  num utterances : 1443
+  hits           = 19228
+  substitutions  = 1539
+  deletions      = 120
+  insertions     = 184
+  ref_chars      = 20887
+  CER            = 0.0882
+--- dialect=Lan-Yin ---
+  num utterances : 1652
+  hits           = 21565
+  substitutions  = 2059
+  deletions      = 199
+  insertions     = 155
+  ref_chars      = 23823
+  CER            = 0.1013
+--- dialect=Mandarin ---
+  num utterances : 5000
+  hits           = 70158
+  substitutions  = 1931
+  deletions      = 390
+  insertions     = 231
+  ref_chars      = 72479
+  CER            = 0.0352
+--- dialect=Northeastern ---
+  num utterances : 351
+  hits           = 4532
+  substitutions  = 179
+  deletions      = 48
+  insertions     = 63
+  ref_chars      = 4759
+  CER            = 0.0609
+--- dialect=Southwestern ---
+  num utterances : 2693
+  hits           = 35302
+  substitutions  = 2859
+  deletions      = 307
+  insertions     = 131
+  ref_chars      = 38468
+  CER            = 0.0857
+--- dialect=Zhongyuan ---
+  num utterances : 3239
+  hits           = 43822
+  substitutions  = 2692
+  deletions      = 300
+  insertions     = 147
+  ref_chars      = 46814
+  CER            = 0.0671
+
+--- Per-dialect summary table ---
+dialect                      #utt        CER
+Mandarin                     5000     0.0352
+Northeastern                  351     0.0609
+Zhongyuan                    3239     0.0671
+Beijing                       265     0.0845
+Southwestern                 2693     0.0857
+Jiao-Liao                    1443     0.0882
+Ji-Lu                        2809     0.0897
+Lan-Yin                      1652     0.1013
+Jiang-Huai                   2271     0.1483

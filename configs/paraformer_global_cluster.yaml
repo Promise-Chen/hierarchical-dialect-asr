@@ -1,0 +1,150 @@
+# configs/paraformer_global_cluster.yaml
+# Global + Cluster Dialect Adaptation (Stage 1 完整版)
+#
+# 架构：
+#   - Global FiLM：per-dialect 低秩调制（c_d × U），逐层 alpha 强度，注入 norm1 后
+#   - Cluster：方言簇路由（Top-2）+ K 个 bottleneck adapter，作用在 encoder 输出后
+# 零启动：alpha=0, gate=0 → 初始严格恒等（Stage 0 已验证）
+# 损失：L_ASR + λ_out * L_outside + λ_util * L_util（路由损失暂未集成，TODO）
+#
+# 训练策略（默认）：
+#   - 冻结主干（梯度流通但权重不更新）
+#   - global_film + cluster 单独分组，lr 15× base
+#   - 3 epoch, batch 32, 每 500 step 存档
+
+model: ParaformerFiLM
+model_conf:
+  ctc_weight: 0.0
+  lsm_weight: 0.1
+  length_normalized_loss: true
+  predictor_weight: 1.0
+  predictor_bias: 1
+  sampling_ratio: 0.75
+
+init_param: ${PRETRAINED_DIR}/paraformer_zh/model.pt   # <-- set to your local paraformer-zh checkpoint
+ignore_init_mismatch: true
+
+encoder: SANMEncoderGlobalCluster
+encoder_conf:
+  output_size: 512
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 50
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  attention_dropout_rate: 0.1
+  input_layer: pe
+  pos_enc_class: SinusoidalPositionEncoder
+  normalize_before: true
+  kernel_size: 11
+  sanm_shfit: 0
+  selfattention_layer_type: sanm
+  # Global FiLM 参数
+  num_accents: 9
+  global_film_rank: 16
+  global_film_layers: all
+  global_film_alpha_init: 0.0
+  # Cluster 参数
+  num_clusters: 4                     # K=4 簇（计划推荐）
+  cluster_bottleneck: 64              # adapter 瓶颈维度
+  cluster_emb_dim: 32                 # 簇 embedding 维度
+  cluster_temperature: 0.1            # softmax 温度
+  cluster_gate_init: 0.0              # 残差门控初值（零启动）
+
+decoder: ParaformerSANMDecoder
+decoder_conf:
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 16
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+  att_layer_num: 16
+  kernel_size: 11
+  sanm_shfit: 0
+
+# ⚠️ 必须与 fullft_ctrl(训出 model.pt.best)的 predictor_conf 完全一致，
+#    否则 predictor 结构对不上，init_param 静默跳过 → 随机初始化 → loss_pre2 爆炸 → CER 废。
+#    best 用 CifPredictorV3 默认参数(upsample_times=5, upsample_type=cnn, 无 blstm)。
+predictor: CifPredictorV3
+predictor_conf:
+  idim: 512
+  threshold: 1.0
+  l_order: 1
+  r_order: 1
+  tail_threshold: 0.45
+
+frontend: WavFrontend
+frontend_conf:
+  fs: 16000
+  window: hamming
+  n_mels: 80
+  frame_length: 25
+  frame_shift: 10
+  lfr_m: 7
+  lfr_n: 6
+  cmvn_file: ${PRETRAINED_DIR}/paraformer_zh/am.mvn
+
+specaug: SpecAugLFR
+specaug_conf:
+  apply_time_warp: false
+  time_warp_window: 5
+  time_warp_mode: bicubic
+  apply_freq_mask: true
+  freq_mask_width_range: [0, 30]
+  lfr_rate: 6
+  num_freq_mask: 1
+  apply_time_mask: true
+  time_mask_width_range: [0, 12]
+  num_time_mask: 1
+
+train_conf:
+  accum_grad: 1
+  grad_clip: 5
+  max_epoch: 3
+  val_scheduler_criterion: [valid, acc]
+  best_model_criterion: [[valid, acc, max]]
+  keep_nbest_models: 5
+  log_interval: 50
+  avg_nbest_model: 3
+  resume: false
+  validate_interval: 999999
+  save_checkpoint_interval: 500
+  use_fp16: true
+  find_unused_parameters: true
+
+optim: adam
+optim_conf:
+  lr: 2.0e-05        # base lr；global_film/cluster 实际 lr = base × LR_MULT
+
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 500
+
+dataset: AudioDatasetWithAccent
+dataset_conf:
+  index_ds: IndexDSJsonlWithAccent
+  batch_sampler: BatchSampler
+  batch_type: example
+  batch_size: 32
+  max_token_length: 2048
+  buffer_size: 500
+  shuffle: true
+  num_workers: 4
+  data_split_num: 1
+
+tokenizer: CharTokenizer
+tokenizer_conf:
+  unk_symbol: <unk>
+  split_with_space: true
+  token_list: ${PRETRAINED_DIR}/paraformer_zh/tokens.json
+  seg_dict_file: ${PRETRAINED_DIR}/paraformer_zh/seg_dict
+
+ctc_conf:
+  dropout_rate: 0.0
+  ctc_type: builtin
+  reduce: true
+  ignore_nan_grad: true
+
+normalize: null

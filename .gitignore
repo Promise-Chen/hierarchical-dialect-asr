@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Data / checkpoints / experiment outputs (never commit)
+data/
+outputs/
+exp/
+logs/
+pretrained_models/
+*.pt
+*.pt.*
+*.ckpt
+*.wav
+*.jsonl
+*.mvn
+
+# PDFs / large binaries
+*.pdf
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
